@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robot Control</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+        }
+        h1 {
+            color: #333;
+        }
+        button {
+            margin: 10px;
+            padding: 15px 30px;
+            font-size: 18px;
+            color: #fff;
+            background-color: #007BFF;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #status {
+            margin-top: 20px;
+            font-size: 16px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <h1>Robot Control Panel</h1>
+    <button id="connect">Connect to Robot</button>
+    <div id="controls" style="display: none;">
+        <button id="walk">Walk</button>
+        <button id="sit">Sit</button>
+        <button id="stop">Stop</button>
+    </div>
+    <p id="status">Status: Disconnected</p>
+
+    <script>
+        let bluetoothDevice;
+        let writer;
+
+        async function connectToRobot() {
+            try {
+                // Request Bluetooth device
+                bluetoothDevice = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: ['0000180a-0000-1000-8000-00805f9b34fb'] // Adjust service UUID as needed
+                });
+
+                // Connect to GATT server
+                const server = await bluetoothDevice.gatt.connect();
+
+                // Get service and characteristic
+                const service = await server.getPrimaryService('0000180a-0000-1000-8000-00805f9b34fb');
+                const characteristic = await service.getCharacteristic('00002a56-0000-1000-8000-00805f9b34fb'); // Adjust characteristic UUID
+
+                writer = characteristic;
+                document.getElementById('status').innerText = 'Status: Connected';
+                document.getElementById('controls').style.display = 'block';
+            } catch (error) {
+                console.error('Bluetooth connection failed', error);
+                document.getElementById('status').innerText = 'Status: Connection Failed';
+            }
+        }
+
+        async function sendCommand(command) {
+            if (!writer) {
+                alert('Not connected to the robot');
+                return;
+            }
+
+            try {
+                const encoder = new TextEncoder();
+                await writer.writeValue(encoder.encode(command));
+                console.log(`Sent command: ${command}`);
+            } catch (error) {
+                console.error('Failed to send command', error);
+            }
+        }
+
+        document.getElementById('connect').addEventListener('click', connectToRobot);
+        document.getElementById('walk').addEventListener('click', () => sendCommand('walk'));
+        document.getElementById('sit').addEventListener('click', () => sendCommand('sit'));
+        document.getElementById('stop').addEventListener('click', () => sendCommand('stop'));
+    </script>
+</body>
+</html>
